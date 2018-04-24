@@ -36,6 +36,7 @@ codequality:
 
 dependency_scanning:
   image: docker:stable
+  stage: test
   variables:
     DOCKER_DRIVER: overlay2
   allow_failure: true
@@ -48,6 +49,7 @@ dependency_scanning:
     paths: [gl-dependency-scanning-report.json]
 sast:container:
   image: docker:stable
+  stage: test
   variables:
     DOCKER_DRIVER: overlay2
   allow_failure: true
