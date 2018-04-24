@@ -1,5 +1,42 @@
+image: docker:latest
+services:
+  - docker:dind
+
+variables:
+  DOCKER_DRIVER: overlay
+  SPRING_PROFILES_ACTIVE: gitlab-ci
+
+stages:
+  - build
+  - test
+  - package
+  - deploy
+
+maven-build:
+  image: maven:3-jdk-8
+  stage: build
+  script: "mvn package -B"
+  artifacts:
+    paths:
+      - target/*.jar
+
+codequality:
+  image: docker:stable
+  stage: test
+  variables:
+    DOCKER_DRIVER: overlay2
+  allow_failure: true
+  services:
+    - docker:stable-dind
+  script:
+    - setup_docker
+    - codeclimate
+  artifacts:
+    paths: [codeclimate.json]
+
 dependency_scanning:
   image: docker:stable
+  stage: test
   variables:
     DOCKER_DRIVER: overlay2
   allow_failure: true
@@ -14,3 +51,10 @@ dependency_scanning:
         "registry.gitlab.com/gitlab-org/security-products/dependency-scanning:$SP_VERSION" /code
   artifacts:
     paths: [gl-dependency-scanning-report.json]
+
+docker-build:
+  stage: package
+  script:
+  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+  - docker push registry.gitlab.com/rapherd/sample-web-app
