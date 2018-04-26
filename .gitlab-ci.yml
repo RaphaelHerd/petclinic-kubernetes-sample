@@ -7,9 +7,9 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-  - build
-  - test
-  - package
+#  - build
+#  - test
+#  - package
   - deploy
 
 maven-build:
@@ -68,6 +68,15 @@ docker-build:
   - docker build -t registry.gitlab.com/rapherd/sample-web-app .
   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
   - docker push registry.gitlab.com/rapherd/sample-web-app
+
+
+k8s-deploy:
+  image: raphaelherding/k8s-bootstrap:v1.2
+  stage: deploy
+  script:
+  - echo "$k8s_config" > config
+  - kubectl --kubeconfig=config get nodes
+
 
 # ---------------------------------------------------------------------------
 
