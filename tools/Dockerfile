@@ -17,6 +17,9 @@ RUN apt-get update && \
 # install AWS CLI
 RUN pip install awscli
 
+# install AWS ADFS login tool
+RUN pip install aws-adfs
+
 # everything should be installed under the root user's home directory
 WORKDIR /root
 
