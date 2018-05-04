@@ -14,8 +14,10 @@ k8s-deploy:
   stage: deploy
   script:
   - echo "$k8s_config" > config
-  - kubectl --kubeconfig=config get nodes
-
+  - kubectl -n $KUBERNETES_NS apply -f deployment/namespace.yaml
+  - deploy_secrets_and_service_accounts
+  - kubectl -n $KUBERNETES_NS apply -f deployment/deployment.yaml
+  - kubectl -n $KUBERNETES_NS apply -f deployment/service.yaml
 
 # ---------------------------------------------------------------------------
 
@@ -26,6 +28,7 @@ k8s-deploy:
   export DATABASE_URL=${DATABASE_URL-$auto_database_url}
   export CI_APPLICATION_REPOSITORY=$CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG
   export CI_APPLICATION_TAG=$CI_COMMIT_SHA
+  export KUBERNETES_NS='petclinic'
   export TILLER_NAMESPACE=$KUBE_NAMESPACE
   # Extract "MAJOR.MINOR" from CI_SERVER_VERSION and generate "MAJOR-MINOR-stable" for Security Products
   export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
@@ -99,6 +102,13 @@ k8s-deploy:
         export DOCKER_HOST='tcp://localhost:2375'
       fi
     fi
+  }
+
+  function deploy_secrets_and_service_accounts() {
+      # create pull secret for getting readonly access to docker registry in gitlab
+      kubectl -n $KUBERNETES_NS create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com
+      # create service account for the application
+      kubectl -n $KUBERNETES_NS applf -f deployment/service-account.yaml
   }
 
 before_script:
