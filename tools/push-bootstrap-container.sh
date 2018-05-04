@@ -1,1 +1,1 @@
-docker push raphaelherding/k8s-bootstrap:v1.2
+docker push raphaelherding/k8s-bootstrap:v1.3

@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: petclinic.bbs-test-zone.com
+  name: petclinic-external-srv
+  namespace: petclinic
+  labels:
+    app: petclinic-ds
+spec:
+  type: LoadBalancer
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+      name: http
+  selector:
+    app: petclinic-ds

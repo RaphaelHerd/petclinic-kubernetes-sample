@@ -1,0 +1,23 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: petclinic-ds
+  namespace: petclinic
+spec:
+  replicas: 2
+  template:
+    metadata:
+      name: petclinic-ds
+      labels:
+        app: petclinic-ds
+    spec:
+      serviceAccountName: petclinic-service-account
+      #imagePullSecrets:
+      #  - name: docker-pull-credentials
+      containers:
+      - name: petclinic-ds
+        image: registry.gitlab.com/rapherd/sample-web-app:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+---
