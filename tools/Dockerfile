@@ -26,8 +26,12 @@ WORKDIR /root
 # set up local bin directory
 RUN mkdir -p ~/.local/bin
 
-# download kubectrl
-RUN curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod u+x kubectl && mv kubectl ~/.local/bin
+# download and install kubectrl
+RUN apt-get update && apt-get install -y apt-transport-https
+RUN curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+RUN echo 'deb http://apt.kubernetes.io/ kubernetes-xenial main' > /etc/apt/sources.list.d/kubernetes.list
+RUN apt-get update
+RUN apt-get install -y kubectl
 
 # download kops
 RUN wget https://github.com/kubernetes/kops/releases/download/1.7.0/kops-linux-amd64 && chmod u+x kops-linux-amd64 && mv kops-linux-amd64 ~/.local/bin/kops
@@ -42,8 +46,4 @@ RUN wget https://releases.hashicorp.com/terraform/0.10.0/terraform_0.10.0_linux_
     unzip terraform_0.10.0_linux_amd64.zip && chmod u+x terraform && \
 	mv terraform ~/.local/bin/ && rm terraform_0.10.0_linux_amd64.zip
 
-# include local bin directory in path
 RUN echo "export PATH=\"\$HOME/.local/bin:\$PATH\"">> .bashrc
-
-CMD ["/bin/bash"]
-
