@@ -10,7 +10,7 @@ stages:
   - deploy
 
 k8s-deploy:
-  image: raphaelherding/k8s-bootstrap:v1.2
+  image: google/cloud-sdk
   stage: deploy
   script:
   - echo "$k8s_config" > config
