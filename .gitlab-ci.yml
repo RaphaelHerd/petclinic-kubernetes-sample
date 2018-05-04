@@ -160,6 +160,15 @@ k8s-deploy-application:
         ;;
     esac
   }
+  
+  function setup_docker() {
+    if ! docker info &>/dev/null; then
+      if [ -z "$DOCKER_HOST" -a "$KUBERNETES_PORT" ]; then
+        export DOCKER_HOST='tcp://localhost:2375'
+      fi
+    fi
+  }
+
 
   function deploy_secrets_and_service_accounts() {
       # create pull secret for getting readonly access to docker registry in gitlab
