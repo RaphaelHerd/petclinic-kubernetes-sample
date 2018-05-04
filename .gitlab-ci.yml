@@ -14,10 +14,7 @@ k8s-deploy:
   stage: deploy
   script:
   - echo "$k8s_config" > config
-  - kubectl -n $KUBERNETES_NS apply -f deployment/namespace.yaml
-  - deploy_secrets_and_service_accounts
-  - kubectl -n $KUBERNETES_NS apply -f deployment/deployment.yaml
-  - kubectl -n $KUBERNETES_NS apply -f deployment/service.yaml
+  
 
 # ---------------------------------------------------------------------------
 
