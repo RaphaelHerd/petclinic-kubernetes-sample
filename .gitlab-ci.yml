@@ -7,68 +7,7 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-#  - build
-#  - test
-#  - package
   - deploy
-
-maven-build:
-  image: maven:3-jdk-8
-  stage: build
-  script: "mvn package -B"
-  artifacts:
-    paths:
-      - target/*.jar
-
-codequality:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - codeclimate
-  artifacts:
-    paths: [codeclimate.json]
-
-dependency_scanning:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - dependency_scanning
-  artifacts:
-    paths: [gl-dependency-scanning-report.json]
-sast:container:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - sast_container
-  artifacts:
-    paths: [gl-sast-container-report.json]
-
-
-docker-build:
-  stage: package
-  script:
-  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-  - docker push registry.gitlab.com/rapherd/sample-web-app
-
 
 k8s-deploy:
   image: raphaelherding/k8s-bootstrap:v1.2
