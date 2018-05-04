@@ -9,13 +9,20 @@ variables:
 stages:
   - deploy
   
-k8s-deploy:
+k8s-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: deploy
+  allow_failure: true
   script:
   - echo "$k8s_config" > config
   - kubectl --kubeconfig config apply -f deployment/namespace.yaml
   - deploy_secrets_and_service_accounts
+
+k8s-deploy-application:
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: deploy
+  script:
+  - echo "$k8s_config" > config
   - deploy_application
 
 # ---------------------------------------------------------------------------
