@@ -29,7 +29,7 @@ docker-build:
    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
    - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
- codequality:
+codequality:
    image: docker:stable
    stage: Test
    variables:
@@ -63,33 +63,35 @@ dependency_scanning:
 
 # SAST on program code level
 sast:
-   image: docker:stable
-   stage: Test
-   variables:
-     DOCKER_DRIVER: overlay2
-   allow_failure: true
-   services:
-     - docker:stable-dind
-   script:
-     - setup_docker
-     - sast
-   artifacts:
-     paths: [gl-sast-report.json]
+    image: docker:stable
+    stage: Test
+    variables:
+      DOCKER_DRIVER: overlay2
+    allow_failure: true
+    services:
+      - docker:stable-dind
+    script:
+      - setup_docker
+      - sast
+    artifacts:
+      paths: [gl-sast-report.json]
 
-# SAST on container level
+
+ # SAST on container level
 sast:container:
-   image: docker:stable
-   stage: Test
-   variables:
-     DOCKER_DRIVER: overlay2
-   allow_failure: true
-   services:
-     - docker:stable-dind
-   script:
-     - setup_docker
-     - sast_container
-   artifacts:
-     paths: [gl-sast-container-report.json]
+    image: docker:stable
+    stage: Test
+    variables:
+      DOCKER_DRIVER: overlay2
+    allow_failure: true
+    services:
+      - docker:stable-dind
+    script:
+      - setup_docker
+      - sast_container
+    artifacts:
+      paths: [gl-sast-container-report.json]
+
 
 docker-package:
    stage: Package
@@ -99,7 +101,7 @@ docker-package:
    - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
    - docker push registry.gitlab.com/rapherd/sample-web-app
 
-k8s-qa-deploy:
+k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: Staging_QA
   environment: QA
@@ -110,7 +112,7 @@ k8s-qa-deploy:
   - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
   - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
       
-k8s-prod-deploy:
+k8s-production-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: Staging_PROD
   environment: PROD
@@ -135,7 +137,6 @@ k8s-prod-deploy:
   export CI_APPLICATION_TAG=$CI_COMMIT_SHA
   export KUBERNETES_NS='petclinic'
   export TILLER_NAMESPACE=$KUBE_NAMESPACE
-  
   # Extract "MAJOR.MINOR" from CI_SERVER_VERSION and generate "MAJOR-MINOR-stable" for Security Products
   export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
 
@@ -232,6 +233,13 @@ k8s-prod-deploy:
       fi
       # create service account for the application
       kubectl --kubeconfig config -n $ns apply -f deployment/prod/service-account.yaml
+  }
+
+  function deploy_application() {
+      # create or update deployment of  the application
+      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/deployment.yaml
+      # create or update service
+      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/service.yaml
   }
 
 before_script:
