@@ -29,6 +29,7 @@ docker-build:
    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
    - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
+
  codequality:
    image: docker:stable
    stage: Test
@@ -76,7 +77,22 @@ sast:
    artifacts:
      paths: [gl-sast-report.json]
 
+
 # SAST on container level
+sast:container:
+   image: docker:stable
+   stage: Test
+   variables:
+     DOCKER_DRIVER: overlay2
+   allow_failure: true
+   services:
+     - docker:stable-dind
+   script:
+     - setup_docker
+     - sast_container
+   artifacts:
+     paths: [gl-sast-container-report.json]
+
 
 docker-package:
    stage: Package
@@ -86,7 +102,7 @@ docker-package:
    - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
    - docker push registry.gitlab.com/rapherd/sample-web-app
 
-k8s-qa-deploy:
+k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: Staging_QA
   environment: QA
@@ -97,7 +113,7 @@ k8s-qa-deploy:
   - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
   - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
       
-k8s-prod-deploy:
+k8s-production-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: Staging_PROD
   environment: PROD
