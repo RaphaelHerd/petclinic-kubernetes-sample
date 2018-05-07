@@ -7,29 +7,28 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-  - compile
-  - build
+#  - compile
+#  - build
  # - test
-  - package
+ # - package
+  - prepare_deploy
   - deploy
   
-maven-jar-compile:
-  image: maven:3-jdk-8
-  stage: compile
-  script: "mvn package -B"
-  artifacts:
-    paths:
-      - target/*.jar
+# maven-jar-compile:
+#   image: maven:3-jdk-8
+#   stage: compile
+#   script: "mvn package -B"
+#   artifacts:
+#     paths:
+#       - target/*.jar
 
-docker-build:
-  stage: build
-  script:
-  - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-  #- docker push registry.gitlab.com/rapherd/sample-web-app
-  #- docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-  #- docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+# docker-build:
+#   stage: build
+#   script:
+#   - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
+#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+#   - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
 
 # codequality:
 #   image: docker:stable
@@ -59,6 +58,26 @@ docker-build:
 #   artifacts:
 #     paths: [gl-dependency-scanning-report.json]
 
+#Static application security testing (SAST) is a set of technologies designed to analyze application source code, 
+# byte code and binaries for coding and design conditions that are indicative of security vulnerabilities. 
+# SAST solutions analyze an application from the “inside out” in a nonrunning state.
+
+# SAST on program code level
+# sast:
+#   image: docker:stable
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - sast
+#   artifacts:
+#     paths: [gl-sast-report.json]
+
+
+# SAST on container level
 # sast:container:
 #   image: docker:stable
 #   stage: test
@@ -74,31 +93,22 @@ docker-build:
 #     paths: [gl-sast-container-report.json]
 
 
-#docker-build:
-#  stage: package
-#  script:
-#  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
-#  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-#  - docker push registry.gitlab.com/rapherd/sample-web-app
-#  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-#  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-
-docker-package:
-  stage: package
-  script:
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-  - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-  - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
-  - docker push registry.gitlab.com/rapherd/sample-web-app
+# docker-package:
+#   stage: package
+#   script:
+#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+#   - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+#   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
+#   - docker push registry.gitlab.com/rapherd/sample-web-app
 
 k8s-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: deploy
+  stage: prepare_deploy
   script:
   - echo "$k8s_config" > config
   - kubectl --kubeconfig config apply -f deployment/namespace.yaml
-  - deploy_secrets_and_service_accounts
-
+  - kubectl --kubeconfig config -n petclinic create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
+      
 k8s-deploy-application:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: deploy
