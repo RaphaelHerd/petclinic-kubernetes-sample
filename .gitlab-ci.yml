@@ -10,7 +10,6 @@ stages:
   - Compile
   - Build
   - Test
-  - Package
   - Staging_QA
   - Staging_PROD
  
@@ -91,15 +90,6 @@ dependency_scanning:
 #      - sast_container
 #    artifacts:
 #      paths: [gl-sast-container-report.json]
-
-
-docker-package:
-   stage: Package
-   script: 
-   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-   - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
-   - docker push registry.gitlab.com/rapherd/sample-web-app
 
 k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
