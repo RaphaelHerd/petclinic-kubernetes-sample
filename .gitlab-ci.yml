@@ -20,6 +20,15 @@ maven-build:
     paths:
       - target/*.jar
 
+docker-build:
+  stage: build
+  script:
+  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+  - docker push registry.gitlab.com/rapherd/sample-web-app
+  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
 codequality:
   image: docker:stable
   stage: test
@@ -47,6 +56,7 @@ dependency_scanning:
     - dependency_scanning
   artifacts:
     paths: [gl-dependency-scanning-report.json]
+
 sast:container:
   image: docker:stable
   stage: test
@@ -62,12 +72,21 @@ sast:container:
     paths: [gl-sast-container-report.json]
 
 
-docker-build:
+#docker-build:
+#  stage: package
+#  script:
+#  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
+#  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+#  - docker push registry.gitlab.com/rapherd/sample-web-app
+#  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+#  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
+docker-package:
   stage: package
   script:
-  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-  - docker push registry.gitlab.com/rapherd/sample-web-app
+  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
 
 k8s-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
@@ -101,7 +120,8 @@ k8s-deploy-application:
   function sast_container() {
     if [[ -n "$CI_REGISTRY_USER" ]]; then
       echo "Logging to GitLab Container Registry with CI credentials..."
-      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+      docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+      #docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
       echo ""
     fi
 
@@ -109,6 +129,7 @@ k8s-deploy-application:
     docker run -p 6060:6060 --link db:postgres -d --name clair arminc/clair-local-scan:v2.0.1
     apk add -U wget ca-certificates
     docker pull ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}
+    #docker pull registry.gitlab.com/rapherd/sample-web-app
     wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
     mv clair-scanner_linux_amd64 clair-scanner
     chmod +x clair-scanner
