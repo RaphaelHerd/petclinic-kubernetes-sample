@@ -137,7 +137,6 @@ k8s-production-deploy-prepare:
   export CI_APPLICATION_TAG=$CI_COMMIT_SHA
   export KUBERNETES_NS='petclinic'
   export TILLER_NAMESPACE=$KUBE_NAMESPACE
-  
   # Extract "MAJOR.MINOR" from CI_SERVER_VERSION and generate "MAJOR-MINOR-stable" for Security Products
   export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
 
@@ -234,6 +233,13 @@ k8s-production-deploy-prepare:
       fi
       # create service account for the application
       kubectl --kubeconfig config -n $ns apply -f deployment/prod/service-account.yaml
+  }
+
+  function deploy_application() {
+      # create or update deployment of  the application
+      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/deployment.yaml
+      # create or update service
+      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/service.yaml
   }
 
 before_script:
