@@ -62,6 +62,12 @@ sast:container:
     paths: [gl-sast-container-report.json]
 
 
+docker-build:
+  stage: package
+  script:
+  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+  - docker push registry.gitlab.com/rapherd/sample-web-app
 
 k8s-deploy:
   image: raphaelherding/k8s-bootstrap:v1.3
