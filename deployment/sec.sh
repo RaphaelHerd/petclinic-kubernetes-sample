@@ -1,1 +1,0 @@
-kubectl create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=gitlab+deploy-token-690 --docker-password=PciwiVc4yxk4zpzeMv-5 --docker-email=mail@mail.com --namespace=petclinic
