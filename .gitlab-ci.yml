@@ -77,19 +77,6 @@ sast:
      paths: [gl-sast-report.json]
 
 # SAST on container level
-sast:container:
-   image: docker:stable
-   stage: Test
-   variables:
-     DOCKER_DRIVER: overlay2
-   allow_failure: true
-   services:
-     - docker:stable-dind
-   script:
-     - setup_docker
-     - sast_container
-   artifacts:
-     paths: [gl-sast-container-report.json]
 
 docker-package:
    stage: Package
