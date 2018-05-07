@@ -31,47 +31,47 @@ docker-build:
   #- docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
   #- docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
-codequality:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - codeclimate
-  artifacts:
-    paths: [codeclimate.json]
+# codequality:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - codeclimate
+#   artifacts:
+#     paths: [codeclimate.json]
 
-dependency_scanning:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - dependency_scanning
-  artifacts:
-    paths: [gl-dependency-scanning-report.json]
+# dependency_scanning:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - dependency_scanning
+#   artifacts:
+#     paths: [gl-dependency-scanning-report.json]
 
-sast:container:
-  image: docker:stable
-  stage: test
-  variables:
-    DOCKER_DRIVER: overlay2
-  allow_failure: true
-  services:
-    - docker:stable-dind
-  script:
-    - setup_docker
-    - sast_container
-  artifacts:
-    paths: [gl-sast-container-report.json]
+# sast:container:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - sast_container
+#   artifacts:
+#     paths: [gl-sast-container-report.json]
 
 
 #docker-build:
