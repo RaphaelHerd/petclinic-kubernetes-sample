@@ -11,9 +11,11 @@ stages:
 #  - build
  # - test
  # - package
-  - prepare_deploy
-  - deploy
-  
+  - QA_Prepare
+  - QA_Deploy
+  - PROD_Prepare
+  - PROD_Deploy
+
 # maven-jar-compile:
 #   image: maven:3-jdk-8
 #   stage: compile
@@ -103,15 +105,15 @@ stages:
 
 k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: prepare_deploy
+  stage: QA_Prepare
   script:
   - echo "$k8s_config" > config
   - kubectl --kubeconfig config apply -f deployment/namespace.yaml
-  - deploy_secrets_and_service_accounts
+  - deploy_secrets_and_service_accounts 'petclinic-qa'
       
 k8s-qa-deploy-application:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: deploy
+  stage: QA_Deploy
   script:
   - echo "$k8s_config" > config
   - deploy_application
@@ -223,10 +225,10 @@ k8s-qa-deploy-application:
 
 
   function deploy_secrets_and_service_accounts() {
+      echo $1
       # create pull secret for getting readonly access to docker registry in gitlab
       string=$(kubectl --kubeconfig config -n $KUBERNETES_NS get secrets -o json)
       if [[ $string != *"gitlab-petclinic-pull-token"* ]]; then
-        echo "It's not there!"
         kubectl --kubeconfig config -n $KUBERNETES_NS create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
       fi
       # create service account for the application
