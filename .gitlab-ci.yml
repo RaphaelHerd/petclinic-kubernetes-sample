@@ -7,133 +7,123 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-#  - compile
-#  - build
- # - test
- # - package
-  - QA_Deploy
-  
-# maven-jar-compile:
-#   image: maven:3-jdk-8
-#   stage: compile
-#   script: "mvn package -B"
-#   artifacts:
-#     paths:
-#       - target/*.jar
+  - Compile
+  - Build
+  - Test
+  - Package
+  - Staging_QA
+  - Staging_PROD
+ 
+maven-jar-compile:
+   image: maven:3-jdk-8
+   stage: Compile
+   script: "mvn package -B"
+   artifacts:
+     paths:
+       - target/*.jar
 
-# docker-build:
-#   stage: build
-#   script:
-#   - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
-#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-#   - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+docker-build:
+   stage: Build
+   script:
+   - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
+   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+   - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
+ codequality:
+   image: docker:stable
+   stage: Test
+   variables:
+     DOCKER_DRIVER: overlay2
+   allow_failure: true
+   services:
+     - docker:stable-dind
+   script:
+     - setup_docker
+     - codeclimate
+   artifacts:
+     paths: [codeclimate.json]
 
-# codequality:
-#   image: docker:stable
-#   stage: test
-#   variables:
-#     DOCKER_DRIVER: overlay2
-#   allow_failure: true
-#   services:
-#     - docker:stable-dind
-#   script:
-#     - setup_docker
-#     - codeclimate
-#   artifacts:
-#     paths: [codeclimate.json]
-
-# dependency_scanning:
-#   image: docker:stable
-#   stage: test
-#   variables:
-#     DOCKER_DRIVER: overlay2
-#   allow_failure: true
-#   services:
-#     - docker:stable-dind
-#   script:
-#     - setup_docker
-#     - dependency_scanning
-#   artifacts:
-#     paths: [gl-dependency-scanning-report.json]
+dependency_scanning:
+   image: docker:stable
+   stage: Test
+   variables:
+     DOCKER_DRIVER: overlay2
+   allow_failure: true
+   services:
+     - docker:stable-dind
+   script:
+     - setup_docker
+     - dependency_scanning
+   artifacts:
+     paths: [gl-dependency-scanning-report.json]
 
 #Static application security testing (SAST) is a set of technologies designed to analyze application source code, 
 # byte code and binaries for coding and design conditions that are indicative of security vulnerabilities. 
 # SAST solutions analyze an application from the “inside out” in a nonrunning state.
 
 # SAST on program code level
-# sast:
-#   image: docker:stable
-#   variables:
-#     DOCKER_DRIVER: overlay2
-#   allow_failure: true
-#   services:
-#     - docker:stable-dind
-#   script:
-#     - setup_docker
-#     - sast
-#   artifacts:
-#     paths: [gl-sast-report.json]
-
+sast:
+   image: docker:stable
+   stage: Test
+   variables:
+     DOCKER_DRIVER: overlay2
+   allow_failure: true
+   services:
+     - docker:stable-dind
+   script:
+     - setup_docker
+     - sast
+   artifacts:
+     paths: [gl-sast-report.json]
 
 # SAST on container level
-# sast:container:
-#   image: docker:stable
-#   stage: test
-#   variables:
-#     DOCKER_DRIVER: overlay2
-#   allow_failure: true
-#   services:
-#     - docker:stable-dind
-#   script:
-#     - setup_docker
-#     - sast_container
-#   artifacts:
-#     paths: [gl-sast-container-report.json]
+sast:container:
+   image: docker:stable
+   stage: Test
+   variables:
+     DOCKER_DRIVER: overlay2
+   allow_failure: true
+   services:
+     - docker:stable-dind
+   script:
+     - setup_docker
+     - sast_container
+   artifacts:
+     paths: [gl-sast-container-report.json]
 
+docker-package:
+   stage: Package
+   script: 
+   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+   - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
+   - docker push registry.gitlab.com/rapherd/sample-web-app
 
-# docker-package:
-#   stage: package
-#   script:
-#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-#   - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-#   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
-#   - docker push registry.gitlab.com/rapherd/sample-web-app
-
-k8s-qa-deploy-prepare:
+k8s-qa-deploy:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: QA_Deploy
+  stage: Staging_QA
   environment: QA
   script:
-  - deploy_application
-  #- echo "$k8s_config" > config
-  #- kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
-  #- deploy_qa_secrets_and_service_accounts 'petclinic-qa'
-  #- kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
-  #- kubectl --kubeconfig config apply -f deployment/qa/service.yaml
+  - echo "$k8s_config" > config
+  - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
+  - deploy_qa_secrets_and_service_accounts 'petclinic-qa'
+  - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
+  - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
       
-# k8s-qa-deploy-application:
-#   image: raphaelherding/k8s-bootstrap:v1.3
-#   stage: QA_Deploy
-#   environment: QA
-#   script:
-#   - echo "$k8s_config" > config
-#   - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
-#   - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
-#   - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
-
-
-# k8s-production-deploy-application:  
-#   image: raphaelherding/k8s-bootstrap:v1.3
-#   stage: PROD_Deploy
-#   environment: PROD
-#   script:
-#   - echo "$k8s_config" > config
-#   - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
-#   - kubectl --kubeconfig config -n $ns apply -f deployment/prod/deployment.yaml
-#   - kubectl --kubeconfig config -n $ns apply -f deployment/prod/service.yaml
-
-
+k8s-prod-deploy:
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: Staging_PROD
+  environment: PROD
+  script:
+  - echo "$k8s_config" > config
+  - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
+  - deploy_prod_secrets_and_service_accounts 'petclinic'
+  - kubectl --kubeconfig config apply -f deployment/prod/deployment.yaml
+  - kubectl --kubeconfig config apply -f deployment/prod/service.yaml
+  only:
+    - master
+  when: manual
+      
 # ---------------------------------------------------------------------------
 
 .auto_devops: &auto_devops |
@@ -145,7 +135,7 @@ k8s-qa-deploy-prepare:
   export CI_APPLICATION_TAG=$CI_COMMIT_SHA
   export KUBERNETES_NS='petclinic'
   export TILLER_NAMESPACE=$KUBE_NAMESPACE
-  export CI_CONTAINER_NAME=ci_job_build_${CI_JOB_ID}
+  
   # Extract "MAJOR.MINOR" from CI_SERVER_VERSION and generate "MAJOR-MINOR-stable" for Security Products
   export SP_VERSION=$(echo "$CI_SERVER_VERSION" | sed 's/^\([0-9]*\)\.\([0-9]*\).*/\1-\2-stable/')
 
@@ -243,17 +233,6 @@ k8s-qa-deploy-prepare:
       # create service account for the application
       kubectl --kubeconfig config -n $ns apply -f deployment/prod/service-account.yaml
   }
-  function deploy_application() {
-    echo 'container id is'
-    echo $CI_CONTAINER_NAME
-   }
-  #  function deploy_application() {
-  #     ns=$1
-  #     # create or update deployment of  the application
-  #     kubectl --kubeconfig config -n $ns apply -f deployment/deployment.yaml
-  #     # create or update service
-  #     kubectl --kubeconfig config -n $ns apply -f deployment/service.yaml
-  # }
 
 before_script:
   - *auto_devops
