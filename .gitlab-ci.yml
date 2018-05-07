@@ -7,24 +7,147 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-  - deploy
-
-k8s-deploy:
-  image: raphaelherding/k8s-bootstrap:v1.3
-  stage: deploy
-  script:
-  - echo "$k8s_config" > config
+#  - compile
+#  - build
+ # - test
+ # - package
+  - QA_Prepare
+  - QA_Deploy
+  - Deploy_to_PROD
+  - PROD_Prepare
+  - PROD_Deploy
   
+# maven-jar-compile:
+#   image: maven:3-jdk-8
+#   stage: compile
+#   script: "mvn package -B"
+#   artifacts:
+#     paths:
+#       - target/*.jar
 
-k8s-deploy:
+# docker-build:
+#   stage: build
+#   script:
+#   - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
+#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+#   - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
+
+# codequality:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - codeclimate
+#   artifacts:
+#     paths: [codeclimate.json]
+
+# dependency_scanning:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - dependency_scanning
+#   artifacts:
+#     paths: [gl-dependency-scanning-report.json]
+
+#Static application security testing (SAST) is a set of technologies designed to analyze application source code, 
+# byte code and binaries for coding and design conditions that are indicative of security vulnerabilities. 
+# SAST solutions analyze an application from the “inside out” in a nonrunning state.
+
+# SAST on program code level
+# sast:
+#   image: docker:stable
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - sast
+#   artifacts:
+#     paths: [gl-sast-report.json]
+
+
+# SAST on container level
+# sast:container:
+#   image: docker:stable
+#   stage: test
+#   variables:
+#     DOCKER_DRIVER: overlay2
+#   allow_failure: true
+#   services:
+#     - docker:stable-dind
+#   script:
+#     - setup_docker
+#     - sast_container
+#   artifacts:
+#     paths: [gl-sast-container-report.json]
+
+
+# docker-package:
+#   stage: package
+#   script:
+#   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+#   - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+#   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
+#   - docker push registry.gitlab.com/rapherd/sample-web-app
+
+k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: deploy
+  stage: QA_Prepare
+  environment: QA
   script:
   - echo "$k8s_config" > config
-  - kubectl -n $KUBERNETES_NS apply -f deployment/namespace.yaml
-  - deploy_secrets_and_service_accounts
-  - kubectl -n $KUBERNETES_NS apply -f deployment/deployment.yaml
-  - kubectl -n $KUBERNETES_NS apply -f deployment/service.yaml
+  - create_k8s_namespace 'petclinic-qa'
+  - deploy_secrets_and_service_accounts 'petclinic-qa'
+      
+k8s-qa-deploy-application:
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: QA_Deploy
+  environment: QA
+  script:
+  - echo "$k8s_config" > config
+  - create_k8s_namespace 'petclinic-qa'
+  - deploy_application 'petclinic-qa'
+
+deploy to production:
+  stage: Deploy_to_PROD
+  script:
+    - echo Deploy to production
+  only:
+    - master
+  when: manual
+
+k8s-production-deploy-prepare:
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: PROD_Prepare
+  environment: PROD
+  script:
+  - echo "$k8s_config" > config
+  - create_k8s_namespace 'petclinic'
+  - deploy_secrets_and_service_accounts 'petclinic'
+      
+k8s-production-deploy-application:  
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: PROD_Deploy
+  environment: PROD
+  script:
+  - echo "$k8s_config" > config
+  - create_k8s_namespace 'petclinic'
+  - deploy_application 'petclinic'
+
 
 # ---------------------------------------------------------------------------
 
@@ -43,7 +166,8 @@ k8s-deploy:
   function sast_container() {
     if [[ -n "$CI_REGISTRY_USER" ]]; then
       echo "Logging to GitLab Container Registry with CI credentials..."
-      docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+      docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+      #docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
       echo ""
     fi
 
@@ -51,13 +175,14 @@ k8s-deploy:
     docker run -p 6060:6060 --link db:postgres -d --name clair arminc/clair-local-scan:v2.0.1
     apk add -U wget ca-certificates
     docker pull ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG}
+    #docker pull registry.gitlab.com/rapherd/sample-web-app
     wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
     mv clair-scanner_linux_amd64 clair-scanner
     chmod +x clair-scanner
     touch clair-whitelist.yml
     retries=0
     echo "Waiting for clair daemon to start"
-    while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
+    while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 15 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
     ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r gl-sast-container-report.json -l clair.log -w clair-whitelist.yml ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} || true
   }
 
@@ -102,7 +227,7 @@ k8s-deploy:
         ;;
     esac
   }
-
+  
   function setup_docker() {
     if ! docker info &>/dev/null; then
       if [ -z "$DOCKER_HOST" -a "$KUBERNETES_PORT" ]; then
@@ -111,11 +236,34 @@ k8s-deploy:
     fi
   }
 
+  function create_k8s_namespace() {
+      ns=$1
+      # create namespace if not exists
+      string=$(kubectl --kubeconfig config get namespaces -o json)
+      if [[ $string != *$ns* ]]; then
+        echo 'Create missing namespace $ns'
+        kubectl --kubeconfig config create namespace $ns
+      fi
+  }
+
+
   function deploy_secrets_and_service_accounts() {
+      ns=$1
       # create pull secret for getting readonly access to docker registry in gitlab
-      kubectl -n $KUBERNETES_NS create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com
+      string=$(kubectl --kubeconfig config -n $ns get secrets -o json)
+      if [[ $string != *"gitlab-petclinic-pull-token"* ]]; then
+        kubectl --kubeconfig config -n $ns create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
+      fi
       # create service account for the application
-      kubectl -n $KUBERNETES_NS applf -f deployment/service-account.yaml
+      kubectl --kubeconfig config -n $ns apply -f deployment/service-account.yaml
+  }
+
+   function deploy_application() {
+      ns=$1
+      # create or update deployment of  the application
+      kubectl --kubeconfig config -n $ns apply -f deployment/deployment.yaml
+      # create or update service
+      kubectl --kubeconfig config -n $ns apply -f deployment/service.yaml
   }
 
 before_script:

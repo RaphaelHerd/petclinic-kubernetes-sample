@@ -34,7 +34,7 @@ RUN apt-get update
 RUN apt-get install -y kubectl
 
 # download kops
-RUN wget https://github.com/kubernetes/kops/releases/download/1.7.0/kops-linux-amd64 && chmod u+x kops-linux-amd64 && mv kops-linux-amd64 ~/.local/bin/kops
+RUN wget https://github.com/kubernetes/kops/releases/download/1.9.0/kops-linux-amd64 && chmod u+x kops-linux-amd64 && mv kops-linux-amd64 ~/.local/bin/kops
 
 # download packer
 RUN wget https://releases.hashicorp.com/packer/1.0.4/packer_1.0.4_linux_amd64.zip && \
@@ -46,4 +46,5 @@ RUN wget https://releases.hashicorp.com/terraform/0.10.0/terraform_0.10.0_linux_
     unzip terraform_0.10.0_linux_amd64.zip && chmod u+x terraform && \
 	mv terraform ~/.local/bin/ && rm terraform_0.10.0_linux_amd64.zip
 
+# include local bin directory in path
 RUN echo "export PATH=\"\$HOME/.local/bin:\$PATH\"">> .bashrc
