@@ -78,7 +78,7 @@ sast:
 
 
  # SAST on container level
- sast:container:
+sast:container:
     image: docker:stable
     stage: Test
     variables:
