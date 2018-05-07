@@ -4,7 +4,7 @@ metadata:
   annotations:
     external-dns.alpha.kubernetes.io/hostname: petclinic.bbs-test-zone.com
   name: petclinic-external-srv
-  namespace: petclinic
+  namespace: petclinic-qa
   labels:
     app: petclinic-ds
 spec:
