@@ -123,7 +123,7 @@ k8s-qa-deploy-application:
   - deploy_application 'petclinic-qa'
 
 deploy to production:
-  stage: PROD_Deploy
+  stage: Deploy_to_PROD
   script:
     - echo Deploy to production
   only:
@@ -132,21 +132,21 @@ deploy to production:
 
 k8s-production-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: QA_Prepare
+  stage: PROD_Prepare
   environment: PROD
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic-qa'
-  - deploy_secrets_and_service_accounts 'petclinic-qa'
+  - create_k8s_namespace 'petclinic'
+  - deploy_secrets_and_service_accounts 'petclinic'
       
 k8s-production-deploy-application:  
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: QA_Deploy
+  stage: PROD_Deploy
   environment: PROD
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic-qa'
-  - deploy_application 'petclinic-qa'
+  - create_k8s_namespace 'petclinic'
+  - deploy_application 'petclinic'
 
 
 # ---------------------------------------------------------------------------
