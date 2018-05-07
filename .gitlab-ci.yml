@@ -29,7 +29,6 @@ docker-build:
    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
    - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
-
  codequality:
    image: docker:stable
    stage: Test
@@ -63,35 +62,35 @@ dependency_scanning:
 # SAST solutions analyze an application from the “inside out” in a nonrunning state.
 
 # SAST on program code level
-sast:
-   image: docker:stable
-   stage: Test
-   variables:
-     DOCKER_DRIVER: overlay2
-   allow_failure: true
-   services:
-     - docker:stable-dind
-   script:
-     - setup_docker
-     - sast
-   artifacts:
-     paths: [gl-sast-report.json]
+# sast:
+#    image: docker:stable
+#    stage: Test
+#    variables:
+#      DOCKER_DRIVER: overlay2
+#    allow_failure: true
+#    services:
+#      - docker:stable-dind
+#    script:
+#      - setup_docker
+#      - sast
+#    artifacts:
+#      paths: [gl-sast-report.json]
 
 
-# SAST on container level
-sast:container:
-   image: docker:stable
-   stage: Test
-   variables:
-     DOCKER_DRIVER: overlay2
-   allow_failure: true
-   services:
-     - docker:stable-dind
-   script:
-     - setup_docker
-     - sast_container
-   artifacts:
-     paths: [gl-sast-container-report.json]
+# # SAST on container level
+# sast:container:
+#    image: docker:stable
+#    stage: Test
+#    variables:
+#      DOCKER_DRIVER: overlay2
+#    allow_failure: true
+#    services:
+#      - docker:stable-dind
+#    script:
+#      - setup_docker
+#      - sast_container
+#    artifacts:
+#      paths: [gl-sast-container-report.json]
 
 
 docker-package:
