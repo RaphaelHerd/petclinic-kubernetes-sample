@@ -9,11 +9,11 @@ variables:
 stages:
   - compile
   - build
-  - test
+ # - test
   - package
   - deploy
-
-maven-build:
+  
+maven-jar-compile:
   image: maven:3-jdk-8
   stage: compile
   script: "mvn package -B"
@@ -86,6 +86,8 @@ sast:container:
 docker-package:
   stage: package
   script:
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
+  - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
   - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
   - docker push registry.gitlab.com/rapherd/sample-web-app
 
@@ -137,7 +139,7 @@ k8s-deploy-application:
     touch clair-whitelist.yml
     retries=0
     echo "Waiting for clair daemon to start"
-    while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 1 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
+    while( ! wget -T 10 -q -O /dev/null http://docker:6060/v1/namespaces ) ; do sleep 15 ; echo -n "." ; if [ $retries -eq 10 ] ; then echo " Timeout, aborting." ; exit 1 ; fi ; retries=$(($retries+1)) ; done
     ./clair-scanner -c http://docker:6060 --ip $(hostname -i) -r gl-sast-container-report.json -l clair.log -w clair-whitelist.yml ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} || true
   }
 
