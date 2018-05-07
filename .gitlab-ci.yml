@@ -23,11 +23,12 @@ maven-build:
 docker-build:
   stage: build
   script:
-  - docker build -t registry.gitlab.com/rapherd/sample-web-app .
+  - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
-  - docker push registry.gitlab.com/rapherd/sample-web-app
-  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
   - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+  #- docker push registry.gitlab.com/rapherd/sample-web-app
+  #- docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+  #- docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
 
 codequality:
   image: docker:stable
@@ -84,9 +85,8 @@ sast:container:
 docker-package:
   stage: package
   script:
-  - docker tag registry.gitlab.com/rapherd/sample-web-app "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-  - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
-
+  - docker tag "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" registry.gitlab.com/rapherd/sample-web-app
+  - docker push registry.gitlab.com/rapherd/sample-web-app
 
 k8s-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
