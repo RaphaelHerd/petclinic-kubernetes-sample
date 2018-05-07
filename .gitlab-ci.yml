@@ -110,8 +110,9 @@ k8s-qa-deploy-prepare:
   environment: QA
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic-qa'
-  - deploy_secrets_and_service_accounts 'petclinic-qa'
+  - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
+ # - create_k8s_namespace 'petclinic-qa'
+  - deploy_qa_secrets_and_service_accounts 'petclinic-qa'
       
 k8s-qa-deploy-application:
   image: raphaelherding/k8s-bootstrap:v1.3
@@ -119,8 +120,9 @@ k8s-qa-deploy-application:
   environment: QA
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic-qa'
-  - deploy_application 'petclinic-qa'
+  - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
+  - kubectl --kubeconfig config -n $ns apply -f deployment/qa/deployment.yaml
+  - kubectl --kubeconfig config -n $ns apply -f deployment/qa/service.yaml
 
 deploy to production:
   stage: Deploy_to_PROD
@@ -136,8 +138,8 @@ k8s-production-deploy-prepare:
   environment: PROD
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic'
-  - deploy_secrets_and_service_accounts 'petclinic'
+  - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
+  - deploy_prod_secrets_and_service_accounts 'petclinic'
       
 k8s-production-deploy-application:  
   image: raphaelherding/k8s-bootstrap:v1.3
@@ -145,8 +147,9 @@ k8s-production-deploy-application:
   environment: PROD
   script:
   - echo "$k8s_config" > config
-  - create_k8s_namespace 'petclinic'
-  - deploy_application 'petclinic'
+  - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
+  - kubectl --kubeconfig config -n $ns apply -f deployment/prod/deployment.yaml
+  - kubectl --kubeconfig config -n $ns apply -f deployment/prod/service.yaml
 
 
 # ---------------------------------------------------------------------------
@@ -236,35 +239,45 @@ k8s-production-deploy-application:
     fi
   }
 
-  function create_k8s_namespace() {
-      ns=$1
-      # create namespace if not exists
-      string=$(kubectl --kubeconfig config get namespaces -o json)
-      if [[ $string != *$ns* ]]; then
-        echo 'Create missing namespace $ns'
-        kubectl --kubeconfig config create namespace $ns
-      fi
-  }
+  # function create_k8s_namespace() {
+  #     ns=$1
+  #     # create namespace if not exists
+  #     string=$(kubectl --kubeconfig config get namespaces -o json)
+  #     if [[ $string != *$ns* ]]; then
+  #       echo 'Create missing namespace $ns'
+  #       kubectl --kubeconfig config create namespace $ns
+  #     fi
+  # }
 
-
-  function deploy_secrets_and_service_accounts() {
+  function deploy_qa_secrets_and_service_accounts() {
       ns=$1
       # create pull secret for getting readonly access to docker registry in gitlab
       string=$(kubectl --kubeconfig config -n $ns get secrets -o json)
-      if [[ $string != *"gitlab-petclinic-pull-token"* ]]; then
-        kubectl --kubeconfig config -n $ns create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
+      if [[ $string != *"gitlab-petclinic-pull-token-qa"* ]]; then
+        kubectl --kubeconfig config -n $ns create secret docker-registry gitlab-petclinic-pull-token-qa --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
       fi
       # create service account for the application
-      kubectl --kubeconfig config -n $ns apply -f deployment/service-account.yaml
+      kubectl --kubeconfig config -n $ns apply -f deployment/qa/service-account.yaml
   }
 
-   function deploy_application() {
+  function deploy_prod_secrets_and_service_accounts() {
       ns=$1
-      # create or update deployment of  the application
-      kubectl --kubeconfig config -n $ns apply -f deployment/deployment.yaml
-      # create or update service
-      kubectl --kubeconfig config -n $ns apply -f deployment/service.yaml
+      # create pull secret for getting readonly access to docker registry in gitlab
+      string=$(kubectl --kubeconfig config -n $ns get secrets -o json)
+      if [[ $string != *"gitlab-petclinic-pull-token-prod"* ]]; then
+        kubectl --kubeconfig config -n $ns create secret docker-registry gitlab-petclinic-pull-token-prod --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
+      fi
+      # create service account for the application
+      kubectl --kubeconfig config -n $ns apply -f deployment/prod/service-account.yaml
   }
+
+  #  function deploy_application() {
+  #     ns=$1
+  #     # create or update deployment of  the application
+  #     kubectl --kubeconfig config -n $ns apply -f deployment/deployment.yaml
+  #     # create or update service
+  #     kubectl --kubeconfig config -n $ns apply -f deployment/service.yaml
+  # }
 
 before_script:
   - *auto_devops
