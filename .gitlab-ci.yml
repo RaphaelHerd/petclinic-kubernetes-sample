@@ -108,7 +108,7 @@ k8s-qa-deploy-prepare:
   stage: QA_Prepare
   script:
   - echo "$k8s_config" > config
-  - kubectl --kubeconfig config apply -f deployment/namespace.yaml
+  - create_k8s_namespace 'petclinic-qa'
   - deploy_secrets_and_service_accounts 'petclinic-qa'
       
 k8s-qa-deploy-application:
@@ -116,7 +116,8 @@ k8s-qa-deploy-application:
   stage: QA_Deploy
   script:
   - echo "$k8s_config" > config
-  - deploy_application
+  - create_k8s_namespace 'petclinic-qa'
+  - deploy_application 'petclinic-qa'
 
 
 # k8s-production-deploy-prepare:
@@ -223,23 +224,34 @@ k8s-qa-deploy-application:
     fi
   }
 
+  function create_k8s_namespace() {
+      ns=$1
+      # create namespace if not exists
+      string=$(kubectl get ns -o json)
+      if [[ $string != *$ns* ]]; then
+        echo 'Create missing namespace $ns'
+        kubectl --kubeconfig config create namespace $ns
+      fi
+  }
+
 
   function deploy_secrets_and_service_accounts() {
-      echo $1
+      ns=$1
       # create pull secret for getting readonly access to docker registry in gitlab
-      string=$(kubectl --kubeconfig config -n $KUBERNETES_NS get secrets -o json)
+      string=$(kubectl --kubeconfig config -n $ns get secrets -o json)
       if [[ $string != *"gitlab-petclinic-pull-token"* ]]; then
-        kubectl --kubeconfig config -n $KUBERNETES_NS create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
+        kubectl --kubeconfig config -n $ns create secret docker-registry gitlab-petclinic-pull-token --docker-server=registry.gitlab.com --docker-username=$docker_pull_token_user --docker-password=$docker_pull_token_password --docker-email=mail@mail.com 2>/dev/null
       fi
       # create service account for the application
-      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/service-account.yaml
+      kubectl --kubeconfig config -n $ns apply -f deployment/service-account.yaml
   }
 
    function deploy_application() {
+      ns=$1
       # create or update deployment of  the application
-      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/deployment.yaml
+      kubectl --kubeconfig config -n $ns apply -f deployment/deployment.yaml
       # create or update service
-      kubectl --kubeconfig config -n $KUBERNETES_NS apply -f deployment/service.yaml
+      kubectl --kubeconfig config -n $ns apply -f deployment/service.yaml
   }
 
 before_script:
