@@ -13,9 +13,10 @@ stages:
  # - package
   - QA_Prepare
   - QA_Deploy
+  - Deploy_to_PROD
   - PROD_Prepare
   - PROD_Deploy
-
+  
 # maven-jar-compile:
 #   image: maven:3-jdk-8
 #   stage: compile
@@ -106,6 +107,7 @@ stages:
 k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: QA_Prepare
+  environment: QA
   script:
   - echo "$k8s_config" > config
   - create_k8s_namespace 'petclinic-qa'
@@ -114,27 +116,37 @@ k8s-qa-deploy-prepare:
 k8s-qa-deploy-application:
   image: raphaelherding/k8s-bootstrap:v1.3
   stage: QA_Deploy
+  environment: QA
   script:
   - echo "$k8s_config" > config
   - create_k8s_namespace 'petclinic-qa'
   - deploy_application 'petclinic-qa'
 
+deploy to production:
+  stage: PROD_Deploy
+  script:
+    - echo Deploy to production
+  only:
+    - master
+  when: manual
 
-# k8s-production-deploy-prepare:
-#   image: raphaelherding/k8s-bootstrap:v1.3
-#   stage: prepare_deploy
-#   script:
-#   - echo "$k8s_config" > config
-#   - kubectl --kubeconfig config apply -f deployment/namespace.yaml
-#   - deploy_secrets_and_service_accounts
+k8s-production-deploy-prepare:
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: QA_Prepare
+  environment: PROD
+  script:
+  - echo "$k8s_config" > config
+  - create_k8s_namespace 'petclinic-qa'
+  - deploy_secrets_and_service_accounts 'petclinic-qa'
       
-# k8s-production-deploy-application:
-#   image: raphaelherding/k8s-bootstrap:v1.3
-#   stage: deploy
-#   script:
-#   - echo "$k8s_config" > config
-#   - deploy_application
-
+k8s-production-deploy-application:  
+  image: raphaelherding/k8s-bootstrap:v1.3
+  stage: QA_Deploy
+  environment: PROD
+  script:
+  - echo "$k8s_config" > config
+  - create_k8s_namespace 'petclinic-qa'
+  - deploy_application 'petclinic-qa'
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +239,7 @@ k8s-qa-deploy-application:
   function create_k8s_namespace() {
       ns=$1
       # create namespace if not exists
-      string=$(kubectl get ns -o json)
+      string=$(kubectl --kubeconfig config get namespaces -o json)
       if [[ $string != *$ns* ]]; then
         echo 'Create missing namespace $ns'
         kubectl --kubeconfig config create namespace $ns
