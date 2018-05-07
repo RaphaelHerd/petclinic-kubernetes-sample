@@ -11,10 +11,7 @@ stages:
 #  - build
  # - test
  # - package
-  - QA_Prepare
   - QA_Deploy
-  - Deploy_to_PROD
-  - PROD_Prepare
   - PROD_Deploy
   
 # maven-jar-compile:
@@ -106,7 +103,7 @@ stages:
 
 k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: QA_Prepare
+  stage: QA_Deploy
   environment: QA
   script:
   - echo "$k8s_config" > config
@@ -125,17 +122,9 @@ k8s-qa-deploy-prepare:
 #   - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
 #   - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
 
-deploy to production:
-  stage: Deploy_to_PROD
-  script:
-    - echo Deploy to production
-  only:
-    - master
-  when: manual
-
 k8s-production-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: PROD_Prepare
+  stage: PROD_Deploy
   environment: PROD
   script:
   - echo "$k8s_config" > config
@@ -143,6 +132,9 @@ k8s-production-deploy-prepare:
   - deploy_prod_secrets_and_service_accounts 'petclinic'
   - kubectl --kubeconfig config apply -f deployment/prod/deployment.yaml
   - kubectl --kubeconfig config apply -f deployment/prod/service.yaml
+  only:
+    - master
+  when: manual
       
 # k8s-production-deploy-application:  
 #   image: raphaelherding/k8s-bootstrap:v1.3
@@ -241,16 +233,6 @@ k8s-production-deploy-prepare:
       fi
     fi
   }
-
-  # function create_k8s_namespace() {
-  #     ns=$1
-  #     # create namespace if not exists
-  #     string=$(kubectl --kubeconfig config get namespaces -o json)
-  #     if [[ $string != *$ns* ]]; then
-  #       echo 'Create missing namespace $ns'
-  #       kubectl --kubeconfig config create namespace $ns
-  #     fi
-  # }
 
   function deploy_qa_secrets_and_service_accounts() {
       ns=$1
