@@ -111,18 +111,19 @@ k8s-qa-deploy-prepare:
   script:
   - echo "$k8s_config" > config
   - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
- # - create_k8s_namespace 'petclinic-qa'
   - deploy_qa_secrets_and_service_accounts 'petclinic-qa'
+  - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
+  - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
       
-k8s-qa-deploy-application:
-  image: raphaelherding/k8s-bootstrap:v1.3
-  stage: QA_Deploy
-  environment: QA
-  script:
-  - echo "$k8s_config" > config
-  - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
-  - kubectl --kubeconfig config -n $ns apply -f deployment/qa/deployment.yaml
-  - kubectl --kubeconfig config -n $ns apply -f deployment/qa/service.yaml
+# k8s-qa-deploy-application:
+#   image: raphaelherding/k8s-bootstrap:v1.3
+#   stage: QA_Deploy
+#   environment: QA
+#   script:
+#   - echo "$k8s_config" > config
+#   - kubectl --kubeconfig config apply -f deployment/qa/namespace.yaml
+#   - kubectl --kubeconfig config apply -f deployment/qa/deployment.yaml
+#   - kubectl --kubeconfig config apply -f deployment/qa/service.yaml
 
 deploy to production:
   stage: Deploy_to_PROD
@@ -140,16 +141,18 @@ k8s-production-deploy-prepare:
   - echo "$k8s_config" > config
   - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
   - deploy_prod_secrets_and_service_accounts 'petclinic'
+  - kubectl --kubeconfig config apply -f deployment/prod/deployment.yaml
+  - kubectl --kubeconfig config apply -f deployment/prod/service.yaml
       
-k8s-production-deploy-application:  
-  image: raphaelherding/k8s-bootstrap:v1.3
-  stage: PROD_Deploy
-  environment: PROD
-  script:
-  - echo "$k8s_config" > config
-  - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
-  - kubectl --kubeconfig config -n $ns apply -f deployment/prod/deployment.yaml
-  - kubectl --kubeconfig config -n $ns apply -f deployment/prod/service.yaml
+# k8s-production-deploy-application:  
+#   image: raphaelherding/k8s-bootstrap:v1.3
+#   stage: PROD_Deploy
+#   environment: PROD
+#   script:
+#   - echo "$k8s_config" > config
+#   - kubectl --kubeconfig config apply -f deployment/prod/namespace.yaml
+#   - kubectl --kubeconfig config -n $ns apply -f deployment/prod/deployment.yaml
+#   - kubectl --kubeconfig config -n $ns apply -f deployment/prod/service.yaml
 
 
 # ---------------------------------------------------------------------------
