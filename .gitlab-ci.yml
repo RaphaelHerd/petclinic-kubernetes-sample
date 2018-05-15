@@ -7,16 +7,16 @@ variables:
   SPRING_PROFILES_ACTIVE: gitlab-ci
 
 stages:
-  - Compile
+  - Code
   - Build
   - Test
-  - Package
-  - Staging_QA
-  - Staging_PROD
+  - Release
+  - Deploy_QA
+  - Deploy_PROD
  
 maven-jar-compile:
    image: maven:3-jdk-8
-   stage: Compile
+   stage: Code
    script: "mvn package -B"
    artifacts:
      paths:
@@ -28,6 +28,11 @@ docker-build:
    - docker build -t "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG" .
    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
    - docker push "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
+
+unit_tests:
+  stage: Test
+  script:
+    - npm test
 
 codequality:
    image: docker:stable
@@ -94,7 +99,7 @@ sast:container:
 
 
 docker-package:
-   stage: Package
+   stage: Release
    script: 
    - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN registry.gitlab.com
    - docker pull "$CI_APPLICATION_REPOSITORY:$CI_APPLICATION_TAG"
@@ -103,7 +108,7 @@ docker-package:
 
 k8s-qa-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: Staging_QA
+  stage: Deploy_QA
   environment: QA
   script:
   - echo "$k8s_config" > config
@@ -114,7 +119,7 @@ k8s-qa-deploy-prepare:
       
 k8s-production-deploy-prepare:
   image: raphaelherding/k8s-bootstrap:v1.3
-  stage: Staging_PROD
+  stage: Deploy_PROD
   environment: PROD
   script:
   - echo "$k8s_config" > config
